@@ -1,0 +1,138 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+directive @upper on FIELD_DEFINITION
+
+type AuthModel {
+  token: String!
+}
+
+"""Department Model"""
+type DepartmentModel {
+  id: ID!
+  name: String!
+  employees: [EmployeeModel]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+"""Position Model"""
+type PositionModel {
+  id: ID!
+  name: String!
+  employees: [EmployeeModel]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+"""Employee Attendance Model"""
+type EmployeeAttendanceModel {
+  id: ID!
+  employeeId: ID!
+  employee: EmployeeModel
+  date: DateTime
+  checkInTime: DateTime!
+  checkOutTime: DateTime
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+"""Employee History Model"""
+type EmployeeHistoryModel {
+  id: ID!
+  employeeId: ID!
+  employee: EmployeeModel
+  positionId: ID!
+  position: PositionModel
+  departmentId: ID!
+  department: DepartmentModel
+  startDate: DateTime!
+  endDate: DateTime
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+"""Employee Model"""
+type EmployeeModel {
+  name: ID!
+  dob: DateTime!
+  departmentId: ID!
+  department: DepartmentModel!
+  positionId: ID!
+  position: PositionModel!
+  accountId: ID
+  account: AccountModel!
+  reportsToId: ID
+  reportsTo: EmployeeModel
+  attendances: [EmployeeAttendanceModel!]!
+  histories: [EmployeeHistoryModel!]!
+  id: ID!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+"""Paginated Employee Model"""
+type PaginatedEmployeeModel {
+  items: [EmployeeModel]!
+  total: Float!
+  totalPage: Float!
+}
+
+"""Account Model"""
+type AccountModel {
+  id: ID!
+  email: String!
+  role: Role!
+  employee: EmployeeModel
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+"""User role in the system"""
+enum Role {
+  ADMIN
+  MANAGER
+  EMPLOYEE
+}
+
+type Query {
+  employee(id: ID!): EmployeeModel!
+  employees(skip: Float = 0, take: Float = 10, filter: String, sortby: SortableEmployeeField): PaginatedEmployeeModel!
+  whoami: AccountModel!
+  departments: [DepartmentModel!]!
+  positions: [PositionModel!]!
+}
+
+"""Fields by which employees can be sorted"""
+enum SortableEmployeeField {
+  NAME
+  JOIN_DATE_ASC
+  JOIN_DATE_DESC
+}
+
+type Mutation {
+  createEmployee(employee: EmployeeInput!): EmployeeModel!
+  updateEmployee(id: ID!, employee: EmployeeInput!): EmployeeModel!
+  login(credentials: AuthInput!): AuthModel!
+}
+
+"""Input data for creating/updating an employee"""
+input EmployeeInput {
+  email: String!
+  name: String!
+  dob: DateTime!
+  accountId: ID
+  departmentId: ID
+  positionId: ID
+}
+
+input AuthInput {
+  email: String!
+  password: String!
+}
