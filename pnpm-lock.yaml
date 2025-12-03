@@ -162,6 +162,9 @@ importers:
       '@heroicons/react':
         specifier: ^2.2.0
         version: 2.2.0(react@19.2.0)
+      '@next/env':
+        specifier: ^16.0.6
+        version: 16.0.6
       clsx:
         specifier: ^2.1.1
         version: 2.1.1

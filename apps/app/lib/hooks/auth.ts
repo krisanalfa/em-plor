@@ -38,6 +38,9 @@ export const useProfile = () => {
       query WhoAmI {
         whoami {
           email
+          employee {
+            name
+          }
         }
       }
     `,

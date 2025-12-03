@@ -15,6 +15,7 @@ import {
   TransitionChild,
 } from "@headlessui/react";
 import {
+  ArrowRightStartOnRectangleIcon,
   Bars3Icon,
   ChevronDownIcon,
   EnvelopeIcon,
@@ -33,6 +34,7 @@ import {
 } from "@em-plor/contracts";
 import EmployeeForm from "@/components/EmployeeForm";
 import { DeepPartial } from "@apollo/client/utilities";
+import { useAuthStore } from "@/lib/stores/auth.store";
 
 const navigation = [
   { name: "Employee", href: "#", icon: HomeIcon, current: true },
@@ -60,6 +62,7 @@ const limitPerPage = 15;
 
 export default function Example() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { account, logout } = useAuthStore();
   const [page, setPage] = useState(1);
   const { data, fetchEmployees } = useEmployees();
   const [sortField, setSortField] = useState<SortableEmployeeField>(
@@ -201,9 +204,92 @@ export default function Example() {
                           ))}
                         </ul>
                       </li>
+                      <li className="-mx-2 mt-auto">
+                        <a
+                          href="#"
+                          className="group flex gap-x-3 rounded-md p-2 text-sm/6 font-semibold text-gray-700 hover:bg-gray-50 hover:text-cyan-600"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            logout();
+                          }}
+                        >
+                          <ArrowRightStartOnRectangleIcon
+                            aria-hidden="true"
+                            className="size-6 shrink-0 text-gray-400 group-hover:text-cyan-600"
+                          />
+                          Logout
+                        </a>
+                      </li>
                     </ul>
                   </nav>
                 </div>
+              </DialogPanel>
+            </div>
+          </Dialog>
+
+          {/* Mobile - Edit Form */}
+          <Dialog
+            open={rightSidebarOpen}
+            onClose={setRightSidebarOpen}
+            className="relative z-50 lg:hidden"
+          >
+            <DialogBackdrop
+              transition
+              className="fixed inset-0 bg-gray-900/80 transition-opacity duration-300 ease-linear data-closed:opacity-0"
+            />
+
+            <div className="fixed inset-0 flex">
+              <DialogPanel
+                transition
+                className="relative mr-16 flex w-full max-w-xs flex-1 transform transition duration-300 ease-in-out data-closed:-translate-x-full"
+              >
+                {/* Sidebar component, swap this element with another sidebar if you like */}
+                {currentEmployee && (
+                  <div className="flex grow flex-col overflow-y-auto bg-white px-6 py-4">
+                    <EmployeeForm
+                      employee={currentEmployee}
+                      onCancel={() => {
+                        setCurrentEmployee(null);
+                        setRightSidebarOpen(false);
+                      }}
+                      onUpdated={handleOnEmployeeUpdated}
+                      onCreated={handleOnEmployeeCreated}
+                    />
+                  </div>
+                )}
+              </DialogPanel>
+            </div>
+          </Dialog>
+
+          {/* Mobile - Detail Form */}
+          <Dialog
+            open={detailSidebarOpen}
+            onClose={setDetailSidebarOpen}
+            className="relative z-50 lg:hidden"
+          >
+            <DialogBackdrop
+              transition
+              className="fixed inset-0 bg-gray-900/80 transition-opacity duration-300 ease-linear data-closed:opacity-0"
+            />
+
+            <div className="fixed inset-0 flex">
+              <DialogPanel
+                transition
+                className="relative flex w-full max-w-xs flex-1 transform transition duration-300 ease-in-out data-closed:-translate-x-full"
+              >
+                {/* Sidebar component, swap this element with another sidebar if you like */}
+                {currentEmployee && (
+                  <div className="flex grow flex-col overflow-y-auto bg-white px-6 py-4">
+                    <EmployeeForm
+                      readonly={true}
+                      employee={currentEmployee}
+                      onCancel={() => {
+                        setCurrentEmployee(null);
+                        setDetailSidebarOpen(false);
+                      }}
+                    />
+                  </div>
+                )}
               </DialogPanel>
             </div>
           </Dialog>
@@ -219,7 +305,7 @@ export default function Example() {
                 />
               </div>
               <nav className="flex flex-1 flex-col">
-                <ul role="list" className="flex flex-1 flex-col gap-y-7">
+                <ul role="list" className="flex flex-1 flex-col gap-y-5">
                   <li>
                     <ul role="list" className="-mx-2 space-y-1">
                       {navigation.map((item) => (
@@ -248,10 +334,26 @@ export default function Example() {
                       ))}
                     </ul>
                   </li>
-                  <li className="-mx-6 mt-auto">
+                  <li className="-mx-2 mt-auto">
                     <a
                       href="#"
-                      className="flex items-center gap-x-4 px-6 py-3 text-sm/6 font-semibold text-gray-900 hover:bg-gray-50"
+                      className="group flex gap-x-3 rounded-md p-2 text-sm/6 font-semibold text-gray-700 hover:bg-gray-50 hover:text-cyan-600"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        logout();
+                      }}
+                    >
+                      <ArrowRightStartOnRectangleIcon
+                        aria-hidden="true"
+                        className="size-6 shrink-0 text-gray-400 group-hover:text-cyan-600"
+                      />
+                      Logout
+                    </a>
+                  </li>
+                  <li className="-mx-6">
+                    <a
+                      href="#"
+                      className="flex items-center gap-x-2 px-6 py-3 text-sm/6 font-semibold text-gray-900 hover:bg-gray-50"
                     >
                       <img
                         alt=""
@@ -259,7 +361,9 @@ export default function Example() {
                         className="size-8 rounded-full bg-gray-50"
                       />
                       <span className="sr-only">Your profile</span>
-                      <span aria-hidden="true">Tom Cook</span>
+                      <span aria-hidden="true">
+                        {account?.employee?.name ?? account?.email}
+                      </span>
                     </a>
                   </li>
                 </ul>

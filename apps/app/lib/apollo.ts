@@ -4,7 +4,7 @@ import { SetContextLink } from "@apollo/client/link/context";
 import { useAuthStore } from "./stores/auth.store";
 
 const httpLink = new HttpLink({
-  uri: process.env.GRAPHQL_URI ?? "https://em-plorapi-production.up.railway.app/graphql",
+  uri: process.env.NEXT_PUBLIC_GRAPHQL_URI ?? "http://localhost:8080/graphql",
 });
 
 const authLink = new SetContextLink(({ headers }) => {
