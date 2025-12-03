@@ -23,6 +23,9 @@ importers:
       '@casl/ability':
         specifier: ^6.7.3
         version: 6.7.3
+      '@em-plor/contracts':
+        specifier: workspace:^
+        version: link:../../packages/contracts
       '@faker-js/faker':
         specifier: ^9.9.0
         version: 9.9.0

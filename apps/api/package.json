@@ -6,7 +6,7 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "build": "nest build",
+    "build": "nest build --webpack",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
@@ -23,6 +23,7 @@
     "@apollo/server": "^5.2.0",
     "@as-integrations/express5": "^1.1.2",
     "@casl/ability": "^6.7.3",
+    "@em-plor/contracts": "workspace:^",
     "@faker-js/faker": "^9.9.0",
     "@graphql-tools/utils": "^10.11.0",
     "@nestjs/apollo": "^13.2.1",
