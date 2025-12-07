@@ -1,5 +1,5 @@
 export function CirclesBackground(
-  props: React.ComponentPropsWithoutRef<'svg'>,
+  props: React.ComponentPropsWithoutRef<"svg">,
 ) {
   return (
     <svg
@@ -14,5 +14,5 @@ export function CirclesBackground(
       <circle cx={545} cy={545} r="416.5" />
       <circle cx={545} cy={545} r="352.5" />
     </svg>
-  )
+  );
 }

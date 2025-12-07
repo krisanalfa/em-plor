@@ -1,8 +1,5 @@
-import { Role } from '@em-plor/contracts';
-
 export interface IJwtPayload {
   readonly id: string;
-  readonly role: Role;
 }
 
 export enum Action {

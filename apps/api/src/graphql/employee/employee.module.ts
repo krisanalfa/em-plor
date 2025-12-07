@@ -14,6 +14,7 @@ import { AuthModule } from '../auth/auth.module';
 
 import { EmployeeResolver } from './employee.resolver';
 import { EmployeeMutation } from './employee.mutation';
+import { EmployeePolicyHandler } from './employee.policy-handler';
 
 @Module({
   imports: [
@@ -28,6 +29,6 @@ import { EmployeeMutation } from './employee.mutation';
     AuthModule,
     HashModule,
   ],
-  providers: [EmployeeResolver, EmployeeMutation],
+  providers: [EmployeeResolver, EmployeeMutation, EmployeePolicyHandler],
 })
 export class EmployeeModule {}

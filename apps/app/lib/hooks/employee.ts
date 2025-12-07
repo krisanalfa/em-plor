@@ -6,11 +6,52 @@ import {
   SortableEmployeeField,
 } from "@em-plor/contracts";
 
-export const useEmployees = () => {
+const EMPLOYEE_FRAGMENT = gql`
+  fragment EmployeeFragment on EmployeeModel {
+    id
+    name
+    dob
+    accountId
+    account {
+      email
+    }
+    departmentId
+    department {
+      name
+    }
+    positionId
+    position {
+      name
+    }
+    attendances {
+      date
+      checkInTime
+      checkOutTime
+    }
+    histories {
+      id
+      position {
+        name
+      }
+      department {
+        name
+      }
+      startDate
+      endDate
+    }
+    reportsTo {
+      id
+      name
+    }
+  }
+`;
+
+export const useGetEmployees = () => {
   const {
     refetch: fetchEmployees,
     data,
     loading,
+    error,
   } = useQuery<
     {
       employees: {
@@ -37,40 +78,12 @@ export const useEmployees = () => {
           total
           totalPage
           items {
-            id
-            name
-            dob
-            accountId
-            account {
-              email
-            }
-            departmentId
-            department {
-              name
-            }
-            positionId
-            position {
-              name
-            }
-            attendances {
-              date
-              checkInTime
-              checkOutTime
-            }
-            histories {
-              id
-              position {
-                name
-              }
-              department {
-                name
-              }
-              startDate
-              endDate
-            }
+            ...EmployeeFragment
           }
         }
       }
+
+      ${EMPLOYEE_FRAGMENT}
     `,
     {
       variables: {
@@ -87,13 +100,50 @@ export const useEmployees = () => {
     fetchEmployees,
     data: data?.employees,
     loading,
+    error,
   };
 };
 
-export const useEmployee = (id: string) => {
+export const useGetEmployee = (id: string, options?: { skip?: boolean }) => {
+  const {
+    data: employeeData,
+    loading: isFetchingEmployee,
+    error: fetchEmployeeError,
+    refetch,
+  } = useQuery<{ employee: IEmployee }, { id: string }>(
+    gql`
+      query Employee($id: ID!) {
+        employee(id: $id) {
+          ...EmployeeFragment
+        }
+      }
+
+      ${EMPLOYEE_FRAGMENT}
+    `,
+    {
+      variables: { id },
+      fetchPolicy: "network-only",
+      skip: options?.skip || !id,
+    },
+  );
+
+  return {
+    employee: employeeData?.employee,
+    isFetchingEmployee,
+    fetchEmployeeError,
+    refetchEmployee: refetch,
+  };
+};
+
+export const useUpdateEmployee = () => {
   const [
-    updateEmployee,
-    { data: updatedEmployee, loading: isUpdatingEmployee },
+    updateEmployeeMutation,
+    {
+      data: updatedEmployeeData,
+      loading: isUpdatingEmployee,
+      error: updateEmployeeError,
+      reset,
+    },
   ] = useMutation<
     { updateEmployee: IEmployee },
     IEmployeeInput & { id: string }
@@ -118,28 +168,34 @@ export const useEmployee = (id: string) => {
           positionId: $positionId
         }
       ) {
-        id
-        name
-        dob
-        accountId
-        account {
-          email
-        }
-        departmentId
-        department {
-          name
-        }
-        positionId
-        position {
-          name
-        }
+        ...EmployeeFragment
       }
     }
+
+    ${EMPLOYEE_FRAGMENT}
   `);
 
+  const updateEmployee = (id: string, input: IEmployeeInput) =>
+    updateEmployeeMutation({ variables: { id, ...input } });
+
+  return {
+    updateEmployee,
+    updatedEmployee: updatedEmployeeData?.updateEmployee,
+    isUpdatingEmployee,
+    updateEmployeeError,
+    resetUpdateEmployee: reset,
+  };
+};
+
+export const useCreateEmployee = () => {
   const [
-    createEmployee,
-    { data: createdEmployee, loading: isCreatingEmployee },
+    createEmployeeMutation,
+    {
+      data: createdEmployeeData,
+      loading: isCreatingEmployee,
+      error: createEmployeeError,
+      reset,
+    },
   ] = useMutation<
     { createEmployee: IEmployee },
     Omit<IEmployeeInput, "accountId">
@@ -160,33 +216,21 @@ export const useEmployee = (id: string) => {
           positionId: $positionId
         }
       ) {
-        id
-        name
-        dob
-        accountId
-        account {
-          email
-        }
-        departmentId
-        department {
-          name
-        }
-        positionId
-        position {
-          name
-        }
+        ...EmployeeFragment
       }
     }
+
+    ${EMPLOYEE_FRAGMENT}
   `);
 
+  const createEmployee = (input: Omit<IEmployeeInput, "accountId">) =>
+    createEmployeeMutation({ variables: { ...input } });
+
   return {
-    updateEmployee: (input: IEmployeeInput) =>
-      updateEmployee({ variables: { id, ...input } }),
-    employee:
-      updatedEmployee?.updateEmployee ?? createdEmployee?.createEmployee,
-    loading: isUpdatingEmployee || isCreatingEmployee,
-    createEmployee: (input: Omit<IEmployeeInput, "accountId">) => {
-      createEmployee({ variables: { ...input } });
-    },
+    createEmployee,
+    createdEmployee: createdEmployeeData?.createEmployee,
+    isCreatingEmployee,
+    createEmployeeError,
+    resetCreateEmployee: reset,
   };
 };

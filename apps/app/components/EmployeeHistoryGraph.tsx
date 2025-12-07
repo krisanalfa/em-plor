@@ -1,6 +1,7 @@
 import { DeepPartial } from "@apollo/client/utilities";
 import { IEmployeeHistory } from "@em-plor/contracts";
 import { CheckIcon, BriefcaseIcon } from "@heroicons/react/20/solid";
+import { useMemo } from "react";
 
 function classNames(...classes: string[]) {
   return classes.filter(Boolean).join(" ");
@@ -8,7 +9,9 @@ function classNames(...classes: string[]) {
 
 function formatDate(date: Date | string | undefined): string {
   if (!date) return "";
+
   const d = new Date(date);
+
   return d.toLocaleDateString("en-US", {
     year: "numeric",
     month: "short",
@@ -18,20 +21,26 @@ function formatDate(date: Date | string | undefined): string {
 
 interface EmployeeHistoryGraphProps {
   histories: DeepPartial<IEmployeeHistory>[];
+  className?: string;
 }
 
 export default function EmployeeHistoryGraph({
   histories,
+  className = "",
 }: EmployeeHistoryGraphProps) {
   // Sort histories by startDate (most recent first)
-  const sortedHistories = [...histories].sort((a, b) => {
-    const dateA = a.startDate ? new Date(a.startDate).getTime() : 0;
-    const dateB = b.startDate ? new Date(b.startDate).getTime() : 0;
-    return dateB - dateA;
-  });
+  const sortedHistories = useMemo(() =>
+    [...histories].sort((a, b) => {
+      const dateA = a.startDate ? new Date(a.startDate).getTime() : 0;
+      const dateB = b.startDate ? new Date(b.startDate).getTime() : 0;
+
+      return dateB - dateA;
+    }),
+    [histories],
+  );
 
   return (
-    <div className="flow-root">
+    <div className={`flow-root ${className}`}>
       <ul role="list" className="-mb-8">
         {sortedHistories.map((history, historyIdx) => {
           const isOngoing = !history.endDate;
@@ -48,7 +57,7 @@ export default function EmployeeHistoryGraph({
                   />
                 ) : null}
                 <div className="relative flex space-x-3">
-                  <div>
+                  <div className="pt-1.5">
                     <span
                       className={classNames(
                         iconBackground,
@@ -85,7 +94,7 @@ export default function EmployeeHistoryGraph({
                           </>
                         )}
                         {isOngoing && (
-                          <span className="text-cyan-600 font-medium">
+                          <span className="font-medium text-cyan-600">
                             {" "}
                             (Current)
                           </span>

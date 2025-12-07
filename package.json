@@ -6,7 +6,9 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "dependencies": {
-    "@em-plor/contracts": "workspace:^"
+  "scripts": {
+    "api": "pnpm --filter api",
+    "app": "pnpm --filter app",
+    "co": "pnpm --filter contracts"
   }
 }

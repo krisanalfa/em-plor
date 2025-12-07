@@ -1,3 +1,4 @@
 dist
 node_modules
 employees.json
+.playwright-mcp

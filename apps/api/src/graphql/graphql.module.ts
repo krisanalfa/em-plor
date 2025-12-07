@@ -7,6 +7,7 @@ import { EmployeeModule } from './employee/employee.module';
 import { DepartmentModule } from './department/department.module';
 import { AuthModule } from './auth/auth.module';
 import { PositionModule } from './positions/positions.module';
+import { AccountModule } from './account/account.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { PositionModule } from './positions/positions.module';
         ],
       },
     }),
+    AccountModule,
     EmployeeModule,
     AuthModule,
     DepartmentModule,

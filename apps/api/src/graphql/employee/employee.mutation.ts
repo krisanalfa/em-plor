@@ -3,19 +3,21 @@ import { Args, Context, Field, ID, InputType, Mutation } from '@nestjs/graphql';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { IEmployeeInput, Role } from '@em-plor/contracts';
+import { Request } from 'express';
 
 import {
   AccountEntity,
   EmployeeEntity,
   EmployeeHistoryEntity,
+  PositionEntity,
 } from 'src/db/entities';
 import { EmployeeModel } from '../models';
 import { HashService } from 'src/hash/hash.service';
-import { AuthGuard } from '../auth';
-import { Request } from 'express';
+import { AuthGuard, CheckPolicies, PoliciesGuard } from '../auth';
+import { EmployeePolicyHandler } from './employee.policy-handler';
 
 @InputType({ description: 'Input data for creating/updating an employee' })
-class EmployeeInput implements IEmployeeInput {
+export class EmployeeInput implements IEmployeeInput {
   @Field(() => String)
   email: string;
 
@@ -44,10 +46,13 @@ export class EmployeeMutation {
     private readonly accountRepo: Repository<AccountEntity>,
     @InjectRepository(EmployeeHistoryEntity)
     private readonly employeeHistoryRepo: Repository<EmployeeHistoryEntity>,
+    @InjectRepository(PositionEntity)
+    private readonly positionRepo: Repository<PositionEntity>,
     private readonly hashService: HashService,
   ) {}
 
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, PoliciesGuard)
+  @CheckPolicies(EmployeePolicyHandler)
   @Mutation(() => EmployeeModel, { name: 'createEmployee' })
   async createEmployee(
     @Args('employee') input: EmployeeInput,
@@ -59,30 +64,28 @@ export class EmployeeMutation {
     }
 
     const { email, ...rest } = input;
+    const position = rest.positionId
+      ? await this.positionRepo.findOne({ where: { id: rest.positionId } })
+      : undefined;
     const newEmployee = this.employeeRepo.create({
       ...rest,
       account: this.accountRepo.create({
         email,
         password: await this.hashService.encrypt('password'),
-        role: Role.EMPLOYEE,
+        role: position?.defaultRole ?? Role.EMPLOYEE,
       }),
     });
 
     return this.employeeRepo.save(newEmployee);
   }
 
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, PoliciesGuard)
+  @CheckPolicies(EmployeePolicyHandler)
   @Mutation(() => EmployeeModel, { name: 'updateEmployee' })
   async updateEmployee(
     @Args('id', { type: () => ID }) id: string,
     @Args('employee') input: EmployeeInput,
-    @Context() { req }: { req: Request },
   ): Promise<EmployeeModel> {
-    // TODO: Move authorization logic to a guard
-    if (req.user!.role !== Role.ADMIN) {
-      throw new Error('Unauthorized');
-    }
-
     const { email, ...rest } = input;
     let employee = await this.employeeRepo.findOneOrFail({
       where: { id },

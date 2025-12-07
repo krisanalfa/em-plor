@@ -46,8 +46,13 @@ export class EmployeeEntity implements IEmployee {
   @UpdateDateColumn()
   updatedAt!: Date;
 
-  @OneToOne(() => EmployeeEntity, (employee) => employee.id)
+  @JoinColumn({ name: 'reportsToId' })
+  @ManyToOne(() => EmployeeEntity, (employee) => employee.id)
   reportsTo?: EmployeeEntity;
+
+  // Invert reporting relationship
+  @OneToMany(() => EmployeeEntity, (employee) => employee.reportsTo)
+  subordinates?: EmployeeEntity[];
 
   @JoinColumn({ name: 'accountId' })
   @OneToOne(() => AccountEntity, (account) => account.employee, {
@@ -55,9 +60,11 @@ export class EmployeeEntity implements IEmployee {
   })
   account?: AccountEntity;
 
+  @JoinColumn({ name: 'departmentId' })
   @ManyToOne(() => DepartmentEntity, (department) => department.employees)
   department?: DepartmentEntity;
 
+  @JoinColumn({ name: 'positionId' })
   @ManyToOne(() => PositionEntity, (position) => position.employees)
   position?: PositionEntity;
 

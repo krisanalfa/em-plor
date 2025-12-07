@@ -43,7 +43,7 @@ export default function Login() {
       title="Sign in to account"
       subtitle={<>Please sign in to your account to manage your employees. </>}
     >
-      <form>
+      <form onSubmit={handleSubmit}>
         <div className="space-y-6">
           <TextField
             label="Email address"
@@ -69,7 +69,6 @@ export default function Login() {
           color="cyan"
           className="mt-8 w-full"
           disabled={loading}
-          onClick={handleSubmit}
         >
           {loading ? "Signing in..." : "Sign In"}
         </Button>

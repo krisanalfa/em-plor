@@ -4,6 +4,7 @@ import { useMemo } from "react";
 
 interface EmployeeAttendanceGraphProps {
   attendances: DeepPartial<IEmployeeAttendance>[];
+  className?: string;
 }
 
 interface DayData {
@@ -13,6 +14,7 @@ interface DayData {
 
 export default function EmployeeAttendanceGraph({
   attendances,
+  className,
 }: EmployeeAttendanceGraphProps) {
   const weeks = useMemo(() => {
     // Process attendances into a map of dates with valid check-in and check-out
@@ -85,9 +87,7 @@ export default function EmployeeAttendanceGraph({
 
   // Get color class based on valid attendance
   const getColorClass = (hasValidAttendance: boolean): string => {
-    return hasValidAttendance
-      ? "bg-cyan-600 dark:bg-cyan-500"
-      : "bg-gray-100 dark:bg-gray-800";
+    return hasValidAttendance ? "bg-cyan-500" : "bg-gray-100";
   };
 
   const monthLabels = [
@@ -107,74 +107,70 @@ export default function EmployeeAttendanceGraph({
   const dayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   return (
-    <div className="w-full overflow-x-auto">
-      <div className="inline-block min-w-full">
-        <div className="flex gap-1">
-          {/* Day labels */}
-          <div className="flex flex-col gap-1 pr-2">
-            <div className="h-4"></div>
-            {dayLabels.map((label, i) => (
-              <div
-                key={label}
-                className="h-3 text-xs text-gray-500 dark:text-gray-400"
-                style={{ lineHeight: "12px" }}
-              >
-                {i % 2 === 1 ? label : ""}
-              </div>
-            ))}
+    <div className={`inline-flex gap-1 ${className ?? ""}`}>
+      {/* Day labels */}
+      <div className="flex shrink-0 flex-col gap-1 pr-2">
+        <div className="h-4"></div>
+        {dayLabels.map((label, i) => (
+          <div
+            key={label}
+            className="h-3 text-xs text-gray-500"
+            style={{ lineHeight: "12px" }}
+          >
+            {i % 2 === 1 ? label : ""}
           </div>
+        ))}
+      </div>
 
-          {/* Graph */}
-          <div className="flex-1">
-            {/* Month labels */}
-            <div className="flex gap-1 mb-1">
-              {weeks.map((week, weekIndex) => {
-                const firstDay = week[0].date;
-                const month = firstDay.getMonth();
-                const isFirstWeekOfMonth =
-                  firstDay.getDate() <= 7 ||
-                  (weekIndex > 0 &&
-                    weeks[weekIndex - 1][0].date.getMonth() !== month);
+      {/* Graph */}
+      <div className="shrink-0">
+        {/* Month labels */}
+        <div className="mb-1 flex gap-1">
+          {weeks.map((week, weekIndex) => {
+            const firstDay = week[0].date;
+            const month = firstDay.getMonth();
+            const isFirstWeekOfMonth =
+              firstDay.getDate() <= 7 ||
+              (weekIndex > 0 &&
+                weeks[weekIndex - 1][0].date.getMonth() !== month);
+
+            return (
+              <div key={weekIndex} className="w-3">
+                {isFirstWeekOfMonth && (
+                  <div className="text-xs text-gray-500">
+                    {monthLabels[month]}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Grid */}
+        <div className="flex gap-1">
+          {weeks.map((week, weekIndex) => (
+            <div key={weekIndex} className="flex flex-col gap-1">
+              {week.map((day, dayIndex) => {
+                const isToday =
+                  day.date.toISOString().split("T")[0] ===
+                  today.toISOString().split("T")[0];
 
                 return (
-                  <div key={weekIndex} className="w-3">
-                    {isFirstWeekOfMonth && (
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        {monthLabels[month]}
-                      </div>
-                    )}
-                  </div>
+                  <div
+                    key={dayIndex}
+                    className={`h-3 w-3 rounded-sm ${getColorClass(day.hasValidAttendance)} ${
+                      isToday ? "ring-2 ring-cyan-500" : ""
+                    } cursor-pointer transition-all hover:ring-2 hover:ring-gray-400`}
+                    title={`${day.date.toLocaleDateString()}: ${
+                      day.hasValidAttendance
+                        ? "Valid attendance"
+                        : "No attendance"
+                    }`}
+                  />
                 );
               })}
             </div>
-
-            {/* Grid */}
-            <div className="flex gap-1">
-              {weeks.map((week, weekIndex) => (
-                <div key={weekIndex} className="flex flex-col gap-1">
-                  {week.map((day, dayIndex) => {
-                    const isToday =
-                      day.date.toISOString().split("T")[0] ===
-                      today.toISOString().split("T")[0];
-
-                    return (
-                      <div
-                        key={dayIndex}
-                        className={`w-3 h-3 rounded-sm ${getColorClass(day.hasValidAttendance)} ${
-                          isToday ? "ring-2 ring-blue-500" : ""
-                        } hover:ring-2 hover:ring-gray-400 transition-all cursor-pointer`}
-                        title={`${day.date.toLocaleDateString()}: ${
-                          day.hasValidAttendance
-                            ? "Valid attendance"
-                            : "No attendance"
-                        }`}
-                      />
-                    );
-                  })}
-                </div>
-              ))}
-            </div>
-          </div>
+          ))}
         </div>
       </div>
     </div>

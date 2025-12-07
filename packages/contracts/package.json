@@ -14,5 +14,8 @@
   "scripts": {
     "build": "tsc",
     "compile": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@casl/ability": "^6.7.3"
   }
 }

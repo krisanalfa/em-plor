@@ -7,6 +7,7 @@ import { JwtService } from '@nestjs/jwt';
 import { AccountEntity } from 'src/db/entities';
 import { HashService } from 'src/hash/hash.service';
 import { IJwtPayload } from './auth.types';
+import { AccountModel } from '../models';
 
 @InputType()
 class AuthInput {
@@ -21,6 +22,9 @@ class AuthInput {
 class AuthModel {
   @Field(() => String)
   token: string;
+
+  @Field(() => AccountModel)
+  account: AccountModel;
 }
 
 @Injectable()
@@ -35,7 +39,6 @@ export class AuthMutation {
   @Mutation(() => AuthModel, { name: 'login' })
   async login(@Args('credentials') credentials: AuthInput): Promise<AuthModel> {
     const account = await this.accountRepository.findOneOrFail({
-      select: ['password', 'role'],
       where: { email: credentials.email },
     });
     const isPasswordValid = await this.hashService.compare(
@@ -46,9 +49,9 @@ export class AuthMutation {
       throw new BadRequestException('Invalid credentials');
     }
 
-    const payload: IJwtPayload = { id: account.id, role: account.role };
+    const payload: IJwtPayload = { id: account.id };
     const token = this.jwtService.sign(payload);
 
-    return { token };
+    return { token, account };
   }
 }

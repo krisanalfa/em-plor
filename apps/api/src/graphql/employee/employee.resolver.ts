@@ -1,7 +1,6 @@
 import {
   Args,
   ArgsType,
-  Context,
   Field,
   ID,
   Query,
@@ -12,7 +11,6 @@ import {
 import { FindManyOptions, FindOptionsWhere, Like, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UseGuards } from '@nestjs/common';
-import { Request } from 'express';
 
 import { Role, SortableEmployeeField } from '@em-plor/contracts';
 import {
@@ -33,6 +31,7 @@ import {
   EmployeeAttendanceModel,
   EmployeeHistoryModel,
 } from '../models';
+import { User } from '../auth';
 
 registerEnumType(SortableEmployeeField, {
   name: 'SortableEmployeeField',
@@ -71,6 +70,7 @@ export class EmployeeResolver {
     private readonly employeeHistoryRepository: Repository<EmployeeHistoryEntity>,
   ) {}
 
+  @UseGuards(AuthGuard)
   @Query(() => EmployeeModel, { name: 'employee' })
   async getEmployee(@Args('id', { type: () => ID }) id: string) {
     return await this.employeeRepository.findOneOrFail({ where: { id } });
@@ -80,7 +80,7 @@ export class EmployeeResolver {
   @Query(() => PaginatedEmployeeModel, { name: 'employees' })
   async getEmployees(
     @Args() args: GetEmployeesArgs,
-    @Context() { req }: { req: Request },
+    @User() user: AccountEntity,
   ): Promise<PaginatedEmployeeModel> {
     const skip = args.skip ?? 0;
     const take = args.take ?? 10;
@@ -97,16 +97,19 @@ export class EmployeeResolver {
     const whereConditions: FindOptionsWhere<EmployeeEntity>[] = [];
     if (args.filter) {
       whereConditions.push({
-        id: req.user!.role === Role.EMPLOYEE ? req.user!.id : undefined,
-        reportsToId: req.user!.role === Role.MANAGER ? req.user!.id : undefined,
+        id: user.role === Role.EMPLOYEE ? user.employee!.id : undefined,
+        reportsToId: user.role === Role.MANAGER ? user.employee!.id : undefined,
         name: Like(`%${args.filter}%`),
       });
       whereConditions.push({
-        id: req.user!.role === Role.EMPLOYEE ? req.user!.id : undefined,
-        reportsToId: req.user!.role === Role.MANAGER ? req.user!.id : undefined,
-        account: {
-          email: Like(`%${args.filter}%`),
-        },
+        id: user.role === Role.EMPLOYEE ? user.employee!.id : undefined,
+        reportsToId: user.role === Role.MANAGER ? user.employee!.id : undefined,
+        account: { email: Like(`%${args.filter}%`) },
+      });
+    } else {
+      whereConditions.push({
+        id: user.role === Role.EMPLOYEE ? user.employee!.id : undefined,
+        reportsToId: user.role === Role.MANAGER ? user.employee!.id : undefined,
       });
     }
     findOptions.where = whereConditions;
@@ -169,5 +172,15 @@ export class EmployeeResolver {
     });
 
     return histories;
+  }
+
+  @UseGuards(AuthGuard)
+  @ResolveField(() => EmployeeModel, { name: 'reportsTo' })
+  async resolveReportsTo(employee: EmployeeModel) {
+    const reportsTo = await this.employeeRepository.findOne({
+      where: { id: employee.reportsToId },
+    });
+
+    return reportsTo;
   }
 }

@@ -2,24 +2,41 @@ import {
   ArrowLongLeftIcon,
   ArrowLongRightIcon,
 } from "@heroicons/react/24/outline";
+import classNames from "classnames";
 
 interface PaginationProps {
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
+  className?: string;
 }
 
 export default function Pagination({
   currentPage,
   totalPages,
   onPageChange,
+  className = "",
 }: PaginationProps) {
-  const currentClassName =
-    "inline-flex items-center border-t-2 border-cyan-500 px-4 pt-4 text-sm font-medium text-cyan-600";
-  const defaultClassName =
-    "inline-flex items-center border-t-2 border-transparent px-4 pt-4 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 cursor-pointer";
-  const disabledClassName =
-    "inline-flex items-center border-t-2 border-transparent pt-4 text-sm font-medium text-gray-300 cursor-not-allowed";
+  const getPageButtonClassName = (isCurrent: boolean) =>
+    classNames(
+      "inline-flex items-center border-t-2 px-4 pt-4 text-sm font-medium",
+      {
+        "border-cyan-500 text-cyan-600": isCurrent,
+        "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 cursor-pointer":
+          !isCurrent,
+      },
+    );
+
+  const getNavButtonClassName = (isDisabled: boolean, extraClasses = "") =>
+    classNames(
+      "inline-flex items-center border-t-2 border-transparent pt-4 text-sm font-medium",
+      extraClasses,
+      {
+        "text-gray-300 cursor-not-allowed": isDisabled,
+        "text-gray-500 hover:border-gray-300 hover:text-gray-700 cursor-pointer":
+          !isDisabled,
+      },
+    );
 
   const isPrevDisabled = currentPage <= 1;
   const isNextDisabled = currentPage >= totalPages;
@@ -101,20 +118,22 @@ export default function Pagination({
   const pageNumbers = getPageNumbers();
 
   return (
-    <nav className="flex items-center justify-between border-t border-gray-200 px-4 sm:px-0 pb-6">
+    <nav
+      data-testid="pagination"
+      className={`flex items-center justify-between px-4 pb-6 sm:px-0 ${className}`}
+    >
       <div className="-mt-px flex w-0 flex-1">
         <button
           onClick={handlePrev}
           disabled={isPrevDisabled}
-          className={
-            isPrevDisabled
-              ? `${disabledClassName} pr-1`
-              : "inline-flex items-center border-t-2 border-transparent pt-4 pr-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
-          }
+          className={getNavButtonClassName(isPrevDisabled, "pr-1")}
         >
           <ArrowLongLeftIcon
             aria-hidden="true"
-            className={`mr-3 size-5 ${isPrevDisabled ? "text-gray-300" : "text-gray-400"}`}
+            className={classNames("mr-3 size-5", {
+              "text-gray-300": isPrevDisabled,
+              "text-gray-400": !isPrevDisabled,
+            })}
           />
           Previous
         </button>
@@ -126,9 +145,7 @@ export default function Pagination({
               key={index}
               onClick={() => handlePageClick(page)}
               aria-current={page === currentPage ? "page" : undefined}
-              className={
-                page === currentPage ? currentClassName : defaultClassName
-              }
+              className={getPageButtonClassName(page === currentPage)}
             >
               {page}
             </button>
@@ -146,16 +163,15 @@ export default function Pagination({
         <button
           onClick={handleNext}
           disabled={isNextDisabled}
-          className={
-            isNextDisabled
-              ? `${disabledClassName} pl-1`
-              : "inline-flex items-center border-t-2 border-transparent pt-4 pl-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
-          }
+          className={getNavButtonClassName(isNextDisabled, "pl-1")}
         >
           Next
           <ArrowLongRightIcon
             aria-hidden="true"
-            className={`ml-3 size-5 ${isNextDisabled ? "text-gray-300" : "text-gray-400"}`}
+            className={classNames("ml-3 size-5", {
+              "text-gray-300": isNextDisabled,
+              "text-gray-400": !isNextDisabled,
+            })}
           />
         </button>
       </div>

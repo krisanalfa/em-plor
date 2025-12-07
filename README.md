@@ -123,34 +123,62 @@ The API uses SQLite as the database. The database file will be created automatic
 
 ### Seeded Data
 
-The database is automatically seeded with sample data on first run:
+The database is automatically seeded with sample data on first run using the `SeederService`. The seeder generates consistent, deterministic data by saving it to `data.json` on the first run and reusing it for subsequent runs.
 
-**Admin Account:**
+#### Data Persistence Strategy
+
+- **First Run**: Generates new random data with stable UUIDs and saves to `data.json`
+- **Subsequent Runs**: Reads from `data.json` to ensure data consistency across database resets
+- **Location**: `apps/api/data.json` (auto-generated)
+
+#### Generated Data
+
+**Departments (10 total):**
+- Executive, Engineering, Product, Sales, Marketing, Human Resources, Finance, Customer Support, Operations, Legal
+
+**Positions (11 levels with rank hierarchy):**
+- Rank 0-5: Intern, Junior, Mid, Senior, Lead, Staff (Default role: EMPLOYEE)
+- Rank 6-10: Manager, Senior Manager, Director, VP, Chief (Default role: MANAGER)
+
+**Genesys Admin Account:**
 - Email: `genesys.admin@example.com`
 - Password: `password`
 - Role: ADMIN
 - Department: Executive
-- Position: CTO
+- Position: Chief (Rank 10)
+- Name: Genesys Admin
+- DOB: July 16, 1991
 
-**Employee Data:**
-- 100 randomly generated employees with varying roles
+**Employee Accounts (100 total):**
+- Randomly generated names, emails (lowercase), and dates of birth
 - Ages: 23-55 years old
-- Departments: Executive, Engineering, Product, Sales, Marketing, Human Resources, Finance, Customer Support, Operations, Legal
-- Positions: From Intern to CTO (11 position levels)
-- Roles: EMPLOYEE (positions 0-5) and MANAGER (positions 6-10)
+- Randomly assigned to departments and positions
+- Password: `password` (hashed once and reused for all accounts for performance)
 
-**Attendance Records:**
-- 1 year of historical attendance data for each employee
-- Weekdays only (Monday-Friday)
+**Role Assignment Logic:**
+- Human Resources department with Manager or higher (rank ≥ 6): **ADMIN** role
+- All other departments: Position's default role (EMPLOYEE or MANAGER based on rank)
+
+**Reporting Hierarchy:**
+- Employees assigned to report to managers within the same department
+- Based on position rank: lower ranks report to higher ranks
+- Employees are sorted by rank, and each employee is randomly assigned to a manager with a higher rank in the same department
+- Top-level employees (highest rank in department) have no manager
+
+**Attendance Records (~20,000+ total):**
+- 1 year of historical data (from 1 year ago to today)
+- Weekdays only (excludes Saturdays and Sundays)
 - 90% attendance probability per employee per day
-- Check-in times: 7:00 AM - 10:00 AM (randomized)
-- Work hours: 8-10 hours (randomized)
+- Random check-in times: 7:00-10:00 AM
+- Random work duration: 8-10 hours per day
+- Check-out time calculated from check-in + work duration
 
-**Employee History:**
-- Historical records of position and department changes
-- Start dates generated for past 2 years
+**Employee History (100 records):**
+- One initial history record per employee
+- Records current position and department assignment
+- Start date: Random date within past 2 years
 
-> **Note:** All seeded employee accounts use the default password `password`. Seed data is saved to `employees.json` and reused on subsequent runs to maintain consistency.
+> **Note:** All seeded accounts use the default password `password`. The seeder optimizes performance by hashing the password once and reusing it for all 101 accounts (100 employees + 1 admin). Seed data is persisted to `data.json` to ensure consistency across database resets and improve seeding speed on subsequent runs.
 
 ## 🔒 Access Control
 

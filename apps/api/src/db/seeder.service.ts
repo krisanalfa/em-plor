@@ -5,6 +5,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { faker } from '@faker-js/faker';
+import { v4 as uuid } from 'uuid';
 
 import { Role } from '@em-plor/contracts';
 
@@ -18,9 +19,64 @@ import {
 } from './entities';
 import { HashService } from '../hash/hash.service';
 
+interface SeedData {
+  departments: Array<{
+    id: string;
+    name: string;
+  }>;
+  positions: Array<{
+    id: string;
+    name: string;
+    rankIndex: number;
+    defaultRole: Role;
+  }>;
+  genesysAccount: {
+    id: string;
+    email: string;
+    role: Role;
+  };
+  genesysEmployee: {
+    id: string;
+    name: string;
+    dob: string;
+    departmentId: string;
+    positionId: string;
+    accountId: string;
+    reportsToId?: string;
+  };
+  accounts: Array<{
+    id: string;
+    email: string;
+    role: Role;
+  }>;
+  employees: Array<{
+    id: string;
+    name: string;
+    dob: string;
+    departmentId: string;
+    positionId: string;
+    accountId: string;
+    reportsToId?: string;
+  }>;
+  attendances: Array<{
+    id: string;
+    employeeId: string;
+    date: string;
+    checkInTime: string;
+    checkOutTime: string;
+  }>;
+  histories: Array<{
+    id: string;
+    employeeId: string;
+    positionId: string;
+    departmentId: string;
+    startDate: string;
+  }>;
+}
+
 @Injectable()
 export class SeederService {
-  private readonly jsonFilePath = join(process.cwd(), 'employees.json');
+  private readonly jsonFilePath = join(process.cwd(), 'data.json');
 
   constructor(
     @InjectRepository(AccountEntity)
@@ -42,7 +98,7 @@ export class SeederService {
     // Check if seed data already exists
     const existingSeedData = await this.readJsonFile();
 
-    if (existingSeedData && existingSeedData.length > 0) {
+    if (existingSeedData) {
       Logger.log('Using existing seed data from JSON file', SeederService.name);
       await this.seedFromJson(existingSeedData);
       return;
@@ -50,37 +106,132 @@ export class SeederService {
 
     Logger.log('Generating new seed data', SeederService.name);
 
-    // Create departments and positions in parallel
-    const [departments, positions] = await Promise.all([
-      this.createDepartments(),
-      this.createPositions(),
-    ]);
+    // Generate departments with stable IDs
+    const departmentsData: SeedData['departments'] = [
+      { id: uuid(), name: 'Executive' },
+      { id: uuid(), name: 'Engineering' },
+      { id: uuid(), name: 'Product' },
+      { id: uuid(), name: 'Sales' },
+      { id: uuid(), name: 'Marketing' },
+      { id: uuid(), name: 'Human Resources' },
+      { id: uuid(), name: 'Finance' },
+      { id: uuid(), name: 'Customer Support' },
+      { id: uuid(), name: 'Operations' },
+      { id: uuid(), name: 'Legal' },
+    ];
+
+    // Generate positions with stable IDs
+    const positionsData: SeedData['positions'] = [
+      { id: uuid(), name: 'Intern', rankIndex: 0, defaultRole: Role.EMPLOYEE },
+      {
+        id: uuid(),
+        name: 'Junior',
+        rankIndex: 1,
+        defaultRole: Role.EMPLOYEE,
+      },
+      {
+        id: uuid(),
+        name: 'Mid',
+        rankIndex: 2,
+        defaultRole: Role.EMPLOYEE,
+      },
+      {
+        id: uuid(),
+        name: 'Senior',
+        rankIndex: 3,
+        defaultRole: Role.EMPLOYEE,
+      },
+      {
+        id: uuid(),
+        name: 'Lead',
+        rankIndex: 4,
+        defaultRole: Role.EMPLOYEE,
+      },
+      {
+        id: uuid(),
+        name: 'Staff',
+        rankIndex: 5,
+        defaultRole: Role.EMPLOYEE,
+      },
+      {
+        id: uuid(),
+        name: 'Manager',
+        rankIndex: 6,
+        defaultRole: Role.MANAGER,
+      },
+      {
+        id: uuid(),
+        name: 'Senior Manager',
+        rankIndex: 7,
+        defaultRole: Role.MANAGER,
+      },
+      {
+        id: uuid(),
+        name: 'Director',
+        rankIndex: 8,
+        defaultRole: Role.MANAGER,
+      },
+      {
+        id: uuid(),
+        name: 'VP',
+        rankIndex: 9,
+        defaultRole: Role.MANAGER,
+      },
+      { id: uuid(), name: 'Chief', rankIndex: 10, defaultRole: Role.MANAGER },
+    ];
+
+    // Create departments and positions in database
+    const departments = await this.departmentRepository.save(
+      departmentsData.map((data) => this.departmentRepository.create(data)),
+    );
+    const positions = await this.positionRepository.save(
+      positionsData.map((data) => this.positionRepository.create(data)),
+    );
 
     // Hash password once instead of 101 times
     const hashedPassword = await this.hashService.encrypt('password');
 
-    // Create Genesys admin account and employee
-    const genesysAccount = await this.accountRepository.save(
-      this.getGenesysAccount(hashedPassword),
+    // Prepare Genesys admin data with stable IDs
+    const genesysAccountId = uuid();
+    const genesysEmployeeId = uuid();
+    const genesysAccountData = {
+      id: genesysAccountId,
+      email: 'genesys.admin@example.com',
+      role: Role.ADMIN,
+    };
+    const genesysEmployeeData = {
+      id: genesysEmployeeId,
+      name: 'Genesys Admin',
+      dob: new Date('1991-07-16').toISOString(),
+      departmentId: departmentsData[0].id,
+      positionId: positionsData[positionsData.length - 1].id,
+      accountId: genesysAccountId,
+    };
+
+    // Create Genesys admin account and employee in database
+    await this.accountRepository.save(
+      this.accountRepository.create({
+        ...genesysAccountData,
+        password: hashedPassword,
+      }),
     );
-    const genesysEmployee = this.getGenesysEmployee();
-    genesysEmployee.accountId = genesysAccount.id;
-    genesysEmployee.departmentId = departments[0].id;
-    genesysEmployee.positionId = positions[positions.length - 1].id;
-    await this.employeeRepository.save(genesysEmployee);
+    await this.employeeRepository.save(
+      this.employeeRepository.create({
+        ...genesysEmployeeData,
+        dob: new Date(genesysEmployeeData.dob),
+      }),
+    );
 
-    // Pre-generate all accounts and employees data
-    const accounts: AccountEntity[] = [];
-    const employeesData: Array<{
-      name: string;
-      email: string;
-      dob: string;
-      departmentName: string;
-      positionName: string;
-      role: Role;
-    }> = [];
+    // Pre-generate all data with stable IDs
+    const accountsData: SeedData['accounts'] = [];
+    const employeesData: SeedData['employees'] = [];
+    const attendancesData: SeedData['attendances'] = [];
+    const historiesData: SeedData['histories'] = [];
 
+    // Generate employees data
     for (let i = 0; i < 100; i++) {
+      const employeeId = uuid();
+      const accountId = uuid();
       const yearsOld = faker.number.int({ min: 23, max: 55 });
       const dob = faker.date.birthdate({
         mode: 'age',
@@ -88,282 +239,269 @@ export class SeederService {
         max: yearsOld,
       });
 
+      const selectedDepartment = faker.helpers.arrayElement(departments);
       const selectedPosition = faker.helpers.arrayElement(positions);
-      const positionIndex = positions.findIndex(
-        (p) => p.id === selectedPosition.id,
+      const role = this.determineRoleBasedOnDepartmentAndPosition(
+        selectedDepartment,
+        selectedPosition,
       );
-      const role = positionIndex >= 6 ? Role.MANAGER : Role.EMPLOYEE;
       const email = faker.internet.email().toLowerCase();
-      const departmentName = faker.helpers.arrayElement(departments).name;
 
-      accounts.push(
-        this.accountRepository.create({
-          email,
-          password: hashedPassword,
-          role,
-        }),
-      );
+      accountsData.push({ id: accountId, email, role });
 
       employeesData.push({
+        id: employeeId,
+        accountId,
         name: faker.person.fullName(),
-        email,
         dob: dob.toISOString(),
-        departmentName,
-        positionName: selectedPosition.name,
-        role,
+        departmentId: selectedDepartment.id,
+        positionId: selectedPosition.id,
       });
+
+      // Generate history for this employee
+      historiesData.push({
+        id: uuid(),
+        employeeId,
+        positionId: selectedPosition.id,
+        departmentId: selectedDepartment.id,
+        startDate: faker.date.past({ years: 2 }).toISOString(),
+      });
+
+      // Generate attendances for this employee
+      const today = new Date();
+      const oneYearAgo = new Date(today);
+      oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+
+      const currentDate = new Date(oneYearAgo);
+      while (currentDate <= today) {
+        // Skip weekends (Saturday = 6, Sunday = 0)
+        if (currentDate.getDay() !== 0 && currentDate.getDay() !== 6) {
+          // 90% chance the employee shows up
+          if (faker.datatype.boolean({ probability: 0.9 })) {
+            const checkInHour = faker.number.int({ min: 7, max: 10 });
+            const checkInMinute = faker.number.int({ min: 0, max: 59 });
+
+            const checkInTime = new Date(currentDate);
+            checkInTime.setHours(checkInHour, checkInMinute, 0, 0);
+
+            // Check out time (8-10 hours after check in)
+            const workHours = faker.number.int({ min: 8, max: 10 });
+            const checkOutTime = new Date(checkInTime);
+            checkOutTime.setHours(checkOutTime.getHours() + workHours);
+
+            attendancesData.push({
+              id: uuid(),
+              employeeId,
+              date: new Date(currentDate).toISOString(),
+              checkInTime: checkInTime.toISOString(),
+              checkOutTime: checkOutTime.toISOString(),
+            });
+          }
+        }
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
     }
 
-    // Save seed data to JSON file
-    await this.saveJsonFile(employeesData);
+    // Assign reporting relationships based on position hierarchy and department
+    this.assignReportingHierarchy(employeesData, positionsData);
 
-    // Bulk insert accounts
-    const savedAccounts = await this.accountRepository.save(accounts);
-
-    // Create employees with saved account IDs
-    const employees = employeesData.map((data, index) => {
-      const department = departments.find(
-        (d) => d.name === data.departmentName,
-      );
-      const position = positions.find((p) => p.name === data.positionName);
-
-      return this.employeeRepository.create({
-        name: data.name,
-        dob: new Date(data.dob),
-        accountId: savedAccounts[index].id,
-        departmentId: department!.id,
-        positionId: position!.id,
-      });
+    // Save all seed data to JSON file
+    await this.saveJsonFile({
+      departments: departmentsData,
+      positions: positionsData,
+      genesysAccount: genesysAccountData,
+      genesysEmployee: genesysEmployeeData,
+      accounts: accountsData,
+      employees: employeesData,
+      attendances: attendancesData,
+      histories: historiesData,
     });
 
-    // Bulk insert employees
-    const savedEmployees = await this.employeeRepository.save(employees);
-
-    // Create employee histories
-    const histories = savedEmployees.map((employee) =>
-      this.historyRepository.create({
-        employeeId: employee.id,
-        positionId: employee.positionId,
-        departmentId: employee.departmentId,
-        startDate: faker.date.past({ years: 2 }),
-      }),
+    // Insert data into database
+    await this.insertDataFromSeed(
+      {
+        departments: departmentsData,
+        positions: positionsData,
+        genesysAccount: genesysAccountData,
+        genesysEmployee: genesysEmployeeData,
+        accounts: accountsData,
+        employees: employeesData,
+        attendances: attendancesData,
+        histories: historiesData,
+      },
+      hashedPassword,
     );
 
-    // Bulk insert histories
-    await this.historyRepository.save(histories);
-
-    // Generate 1 year of attendance for each employee
-    await this.createAttendances(savedEmployees);
-
     Logger.log('Database seeded successfully!', SeederService.name);
-    Logger.log(`Created ${departments.length} departments`, SeederService.name);
-    Logger.log(`Created ${positions.length} positions`, SeederService.name);
     Logger.log(
-      `Created ${savedEmployees.length + 1} employees (including Genesys admin)`,
+      `Created ${departmentsData.length} departments`,
+      SeederService.name,
+    );
+    Logger.log(`Created ${positionsData.length} positions`, SeederService.name);
+    Logger.log(
+      `Created ${accountsData.length + 1} accounts (including Genesys admin)`,
       SeederService.name,
     );
     Logger.log(
-      `Created attendance records for the past year`,
+      `Created ${employeesData.length + 1} employees (including Genesys admin)`,
+      SeederService.name,
+    );
+    Logger.log(
+      `Created ${attendancesData.length} attendance records`,
+      SeederService.name,
+    );
+    Logger.log(
+      `Created ${historiesData.length} history records`,
       SeederService.name,
     );
   }
 
-  private async seedFromJson(
-    seedData: Array<{
-      name: string;
-      email: string;
-      dob: string;
-      departmentName: string;
-      positionName: string;
-      role: Role;
-    }>,
+  private determineRoleBasedOnDepartmentAndPosition(
+    department: DepartmentEntity,
+    position: PositionEntity,
   ) {
-    // Create departments and positions in parallel
-    const [departments, positions] = await Promise.all([
-      this.createDepartments(),
-      this.createPositions(),
-    ]);
+    if (department.name !== 'Human Resources')
+      return position.defaultRole ?? Role.EMPLOYEE;
+
+    // Manager HR or higher has ADMIN role
+    if (position.rankIndex >= 6) {
+      return Role.ADMIN;
+    }
+
+    return Role.EMPLOYEE;
+  }
+
+  private async seedFromJson(seedData: SeedData) {
+    // Create departments and positions from JSON data
+    await this.departmentRepository.save(
+      seedData.departments.map((data) =>
+        this.departmentRepository.create(data),
+      ),
+    );
+    await this.positionRepository.save(
+      seedData.positions.map((data) => this.positionRepository.create(data)),
+    );
 
     // Hash password once
     const hashedPassword = await this.hashService.encrypt('password');
 
-    // Create Genesys admin account and employee
-    const genesysAccount = await this.accountRepository.save(
-      this.getGenesysAccount(hashedPassword),
-    );
-    const genesysEmployee = this.getGenesysEmployee();
-    genesysEmployee.accountId = genesysAccount.id;
-    genesysEmployee.departmentId = departments[0].id;
-    genesysEmployee.positionId = positions[positions.length - 1].id;
-    await this.employeeRepository.save(genesysEmployee);
-
-    // Create accounts from JSON data
-    const accounts = seedData.map((data) =>
+    // Create Genesys admin account and employee from JSON data
+    await this.accountRepository.save(
       this.accountRepository.create({
+        id: seedData.genesysAccount.id,
+        email: seedData.genesysAccount.email,
+        role: seedData.genesysAccount.role,
+        password: hashedPassword,
+      }),
+    );
+    await this.employeeRepository.save(
+      this.employeeRepository.create({
+        id: seedData.genesysEmployee.id,
+        name: seedData.genesysEmployee.name,
+        dob: new Date(seedData.genesysEmployee.dob),
+        accountId: seedData.genesysEmployee.accountId,
+        departmentId: seedData.genesysEmployee.departmentId,
+        positionId: seedData.genesysEmployee.positionId,
+        reportsToId: seedData.genesysEmployee.reportsToId,
+      }),
+    );
+
+    // Insert data from seed
+    await this.insertDataFromSeed(seedData, hashedPassword);
+
+    Logger.log('Database seeded from JSON file!', SeederService.name);
+    Logger.log(
+      `Created ${seedData.departments.length} departments`,
+      SeederService.name,
+    );
+    Logger.log(
+      `Created ${seedData.positions.length} positions`,
+      SeederService.name,
+    );
+    Logger.log(
+      `Created ${seedData.accounts.length + 1} accounts (including Genesys admin)`,
+      SeederService.name,
+    );
+    Logger.log(
+      `Created ${seedData.employees.length + 1} employees (including Genesys admin)`,
+      SeederService.name,
+    );
+    Logger.log(
+      `Created ${seedData.attendances.length} attendance records`,
+      SeederService.name,
+    );
+    Logger.log(
+      `Created ${seedData.histories.length} history records`,
+      SeederService.name,
+    );
+  }
+
+  private async insertDataFromSeed(
+    seedData: SeedData,
+    hashedPassword: string,
+  ): Promise<void> {
+    // Create accounts from JSON data
+    const accounts = seedData.accounts.map((data) =>
+      this.accountRepository.create({
+        id: data.id,
         email: data.email,
         password: hashedPassword,
         role: data.role,
       }),
     );
 
-    const savedAccounts = await this.accountRepository.save(accounts);
+    await this.accountRepository.save(accounts);
 
-    // Create employees from JSON data
-    const employees = seedData.map((data, index) => {
-      const department = departments.find(
-        (d) => d.name === data.departmentName,
-      );
-      const position = positions.find((p) => p.name === data.positionName);
-
-      return this.employeeRepository.create({
+    // Create employees from JSON data (without reportsToId first to avoid FK constraint issues)
+    const employees = seedData.employees.map((data) =>
+      this.employeeRepository.create({
+        id: data.id,
         name: data.name,
         dob: new Date(data.dob),
-        accountId: savedAccounts[index].id,
-        departmentId: department!.id,
-        positionId: position!.id,
-      });
-    });
+        accountId: data.accountId,
+        departmentId: data.departmentId,
+        positionId: data.positionId,
+      }),
+    );
 
-    const savedEmployees = await this.employeeRepository.save(employees);
+    await this.employeeRepository.save(employees);
 
-    // Create employee histories
-    const histories = savedEmployees.map((employee) =>
+    // Update employees with reporting relationships after all employees are inserted
+    await Promise.all(
+      seedData.employees.map(async (data) => {
+        if (!data.reportsToId) return;
+
+        await this.employeeRepository.update(data.id, {
+          reportsToId: data.reportsToId,
+        });
+      }),
+    );
+
+    // Create employee histories from JSON data
+    const histories = seedData.histories.map((data) =>
       this.historyRepository.create({
-        employeeId: employee.id,
-        positionId: employee.positionId,
-        departmentId: employee.departmentId,
-        startDate: faker.date.past({ years: 2 }),
+        id: data.id,
+        employeeId: data.employeeId,
+        positionId: data.positionId,
+        departmentId: data.departmentId,
+        startDate: new Date(data.startDate),
       }),
     );
 
     await this.historyRepository.save(histories);
 
-    // Generate 1 year of attendance for each employee
-    await this.createAttendances(savedEmployees);
-
-    Logger.log('Database seeded from JSON file!', SeederService.name);
-    Logger.log(`Created ${departments.length} departments`, SeederService.name);
-    Logger.log(`Created ${positions.length} positions`, SeederService.name);
-    Logger.log(
-      `Created ${savedEmployees.length + 1} employees (including Genesys admin)`,
-      SeederService.name,
-    );
-    Logger.log(
-      `Created attendance records for the past year`,
-      SeederService.name,
-    );
-  }
-
-  private async createDepartments(): Promise<DepartmentEntity[]> {
-    const departmentNames = [
-      'Executive',
-      'Engineering',
-      'Product',
-      'Sales',
-      'Marketing',
-      'Human Resources',
-      'Finance',
-      'Customer Support',
-      'Operations',
-      'Legal',
-    ];
-
-    const departments = departmentNames.map((name) =>
-      this.departmentRepository.create({ name }),
+    // Create attendances from JSON data
+    const attendances = seedData.attendances.map((data) =>
+      this.attendanceRepository.create({
+        id: data.id,
+        employeeId: data.employeeId,
+        date: new Date(data.date),
+        checkInTime: new Date(data.checkInTime),
+        checkOutTime: new Date(data.checkOutTime),
+      }),
     );
 
-    return this.departmentRepository.save(departments);
-  }
-
-  private async createPositions(): Promise<PositionEntity[]> {
-    const positionNames = [
-      'Intern',
-      'Junior Developer',
-      'Developer',
-      'Senior Developer',
-      'Lead Developer',
-      'Staff Engineer',
-      'Engineering Manager',
-      'Senior Engineering Manager',
-      'Director of Engineering',
-      'VP of Engineering',
-      'CTO',
-    ];
-
-    const positions = positionNames.map((name) =>
-      this.positionRepository.create({ name }),
-    );
-
-    return this.positionRepository.save(positions);
-  }
-
-  private async createAttendances(employees: EmployeeEntity[]): Promise<void> {
-    const today = new Date();
-    const oneYearAgo = new Date(today);
-    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-
-    // Generate all workdays once
-    const workdays: Date[] = [];
-    const currentDate = new Date(oneYearAgo);
-    while (currentDate <= today) {
-      // Skip weekends (Saturday = 6, Sunday = 0)
-      if (currentDate.getDay() !== 0 && currentDate.getDay() !== 6) {
-        workdays.push(new Date(currentDate));
-      }
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
-
-    // Batch size for bulk inserts
-    const BATCH_SIZE = 500;
-    const allAttendances: EmployeeAttendanceEntity[] = [];
-
-    for (const employee of employees) {
-      for (const workday of workdays) {
-        // 90% chance the employee shows up
-        if (faker.datatype.boolean({ probability: 0.9 })) {
-          const checkInHour = faker.number.int({ min: 7, max: 10 });
-          const checkInMinute = faker.number.int({ min: 0, max: 59 });
-
-          const checkInTime = new Date(workday);
-          checkInTime.setHours(checkInHour, checkInMinute, 0, 0);
-
-          // Check out time (8-10 hours after check in)
-          const workHours = faker.number.int({ min: 8, max: 10 });
-          const checkOutTime = new Date(checkInTime);
-          checkOutTime.setHours(checkOutTime.getHours() + workHours);
-
-          allAttendances.push(
-            this.attendanceRepository.create({
-              employeeId: employee.id,
-              date: new Date(workday),
-              checkInTime,
-              checkOutTime,
-            }),
-          );
-        }
-      }
-    }
-
-    // Bulk insert in batches to avoid overwhelming the database
-    for (let i = 0; i < allAttendances.length; i += BATCH_SIZE) {
-      const batch = allAttendances.slice(i, i + BATCH_SIZE);
-      await this.attendanceRepository.save(batch);
-    }
-  }
-
-  private getGenesysEmployee(): EmployeeEntity {
-    return this.employeeRepository.create({
-      name: 'Genesys Admin',
-      dob: new Date('1991-07-16'),
-    });
-  }
-
-  private getGenesysAccount(hashedPassword: string): AccountEntity {
-    return this.accountRepository.create({
-      email: 'genesys.admin@example.com',
-      password: hashedPassword,
-      role: Role.ADMIN,
-    });
+    await this.attendanceRepository.save(attendances);
   }
 
   private async isJsonFileExists(): Promise<boolean> {
@@ -375,33 +513,17 @@ export class SeederService {
     }
   }
 
-  private async readJsonFile(): Promise<
-    Array<{
-      name: string;
-      email: string;
-      dob: string;
-      departmentName: string;
-      positionName: string;
-      role: Role;
-    }>
-  > {
+  private async readJsonFile(): Promise<SeedData | null> {
     const fileExists = await this.isJsonFileExists();
     if (!fileExists) {
-      return [];
+      return null;
     }
 
     const fileContent = await readFile(this.jsonFilePath, 'utf-8');
-    return JSON.parse(fileContent) as Array<{
-      name: string;
-      email: string;
-      dob: string;
-      departmentName: string;
-      positionName: string;
-      role: Role;
-    }>;
+    return JSON.parse(fileContent) as SeedData;
   }
 
-  private async saveJsonFile(data: unknown[]): Promise<void> {
+  private async saveJsonFile(data: SeedData): Promise<void> {
     try {
       await writeFile(
         this.jsonFilePath,
@@ -412,5 +534,61 @@ export class SeederService {
     } catch (error) {
       Logger.error(`Failed to save seed data to ${this.jsonFilePath}`, error);
     }
+  }
+
+  /**
+   * Assign reporting hierarchy based on position ranks and departments.
+   * Lower rank employees report to higher rank employees in the same department.
+   */
+  private assignReportingHierarchy(
+    employees: SeedData['employees'],
+    positions: SeedData['positions'],
+  ): void {
+    // Create position rank map (higher index = higher rank)
+    const positionRankMap = new Map<string, number>();
+    positions.forEach((position, index) => {
+      positionRankMap.set(position.id, index);
+    });
+
+    // Group employees by department
+    const employeesByDepartment = new Map<string, SeedData['employees']>();
+    employees.forEach((employee) => {
+      const dept = employee.departmentId;
+      if (!employeesByDepartment.has(dept)) {
+        employeesByDepartment.set(dept, []);
+      }
+      employeesByDepartment.get(dept)!.push(employee);
+    });
+
+    // For each department, assign reporting relationships
+    employeesByDepartment.forEach((deptEmployees) => {
+      // Sort by position rank (descending - highest rank first)
+      deptEmployees.sort((a, b) => {
+        const rankA = positionRankMap.get(a.positionId) ?? 0;
+        const rankB = positionRankMap.get(b.positionId) ?? 0;
+        return rankB - rankA;
+      });
+
+      // For each employee, find a manager (someone with higher rank in same dept)
+      deptEmployees.forEach((employee) => {
+        const employeeRank = positionRankMap.get(employee.positionId) ?? 0;
+
+        // Find potential managers (higher rank in same department)
+        const potentialManagers = deptEmployees.filter((potentialManager) => {
+          const managerRank =
+            positionRankMap.get(potentialManager.positionId) ?? 0;
+          return (
+            potentialManager.id !== employee.id && managerRank > employeeRank
+          );
+        });
+
+        // If there are potential managers, randomly assign one
+        if (potentialManagers.length > 0) {
+          const manager = faker.helpers.arrayElement(potentialManagers);
+          employee.reportsToId = manager.id;
+        }
+        // Top-level employees (highest rank) will have no reportsToId
+      });
+    });
   }
 }

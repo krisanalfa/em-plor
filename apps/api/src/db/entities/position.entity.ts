@@ -1,4 +1,4 @@
-import { IPosition } from '@em-plor/contracts';
+import { IPosition, Role } from '@em-plor/contracts';
 import {
   Column,
   CreateDateColumn,
@@ -17,6 +17,12 @@ export class PositionEntity implements IPosition {
 
   @Column()
   name!: string;
+
+  @Column()
+  rankIndex!: number;
+
+  @Column({ type: 'varchar', nullable: true })
+  defaultRole?: Role;
 
   @CreateDateColumn()
   createdAt!: Date;

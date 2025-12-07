@@ -3,6 +3,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  JoinColumn,
   OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
@@ -29,6 +30,7 @@ export class AccountEntity implements IAccount {
   @UpdateDateColumn()
   updatedAt!: Date;
 
+  @JoinColumn({ name: 'employeeId' })
   @OneToOne(() => EmployeeEntity, (employee) => employee.accountId)
   employee?: EmployeeEntity;
 }

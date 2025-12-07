@@ -1,3 +1,5 @@
+import { InferSubjects, MongoAbility } from "@casl/ability";
+
 export enum Role {
   /**
    * Administrator with full access
@@ -16,6 +18,33 @@ export enum Role {
    */
   EMPLOYEE = "EMPLOYEE",
 }
+
+export enum Action {
+  Manage = "manage",
+  Create = "create",
+  Read = "read",
+  Update = "update",
+  Delete = "delete",
+}
+
+interface Type<T = any> extends Function {
+  new (...args: any[]): T;
+}
+
+type EmployeeEntity = Type<IEmployee>;
+// @ts-expect-error abstraction
+export class EmployeeInput implements IEmployeeInput {
+  // Sent as GQL variable
+  id?: string;
+}
+
+export type Subjects =
+  | InferSubjects<EmployeeEntity | EmployeeInput>
+  | EmployeeEntity
+  | EmployeeInput
+  | "all";
+
+export type AppAbility = MongoAbility<[Action, Subjects]>;
 
 export enum SortableEmployeeField {
   NAME = "NAME",
@@ -46,6 +75,8 @@ export interface IDepartment extends IHasId, ITimestamped {
 
 export interface IPosition extends IHasId, ITimestamped {
   name: string;
+  rankIndex: number;
+  defaultRole?: Role;
   employees?: IEmployee[];
 }
 
